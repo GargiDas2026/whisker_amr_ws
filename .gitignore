@@ -1,0 +1,7 @@
+build/
+install/
+log/
+*.mcap
+*.db3
+__pycache__/
+.vscode/

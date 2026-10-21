@@ -1,0 +1,92 @@
+<mujoco model="whisker_amr_world">
+  <!--
+    Week-1 world: differential-drive AMR in a small room with one GLASS wall.
+    Geom groups (used later by the custom LiDAR):
+      group 0 = default visible + LiDAR-visible
+      group 3 = glass: collides physically, but the LiDAR will be told to ignore it
+  -->
+  <compiler angle="radian" autolimits="true"/>
+  <option timestep="0.002" integrator="implicitfast"/>
+
+  <visual>
+    <!-- fog is OFF for now; week 3 turns it on: fogstart/fogend in meters -->
+    <map fogstart="50" fogend="100"/>
+    <rgba fog="0.75 0.75 0.75 1"/>
+    <global offwidth="1280" offheight="720"/>
+  </visual>
+
+  <asset>
+    <texture name="grid" type="2d" builtin="checker" width="512" height="512"
+             rgb1="0.25 0.26 0.28" rgb2="0.32 0.33 0.35"/>
+    <material name="floor" texture="grid" texrepeat="8 8" reflectance="0.1"/>
+    <material name="wall"  rgba="0.80 0.78 0.72 1"/>
+    <material name="glass" rgba="0.60 0.85 1.00 0.25"/>
+    <material name="body"  rgba="0.15 0.45 0.80 1"/>
+    <material name="tire"  rgba="0.08 0.08 0.08 1"/>
+  </asset>
+
+  <default>
+    <default class="wheel">
+      <geom type="cylinder" size="0.05 0.02" material="tire"
+            friction="1.2 0.005 0.0001" condim="3"/>
+      <joint type="hinge" axis="0 0 1" damping="0.01"/>
+    </default>
+  </default>
+
+  <worldbody>
+    <light pos="0 0 4" dir="0 0 -1" diffuse="0.9 0.9 0.9"/>
+    <geom name="floor" type="plane" size="5 5 0.1" material="floor"/>
+
+    <!-- 6 m x 6 m room -->
+    <geom name="wall_n" type="box" pos="0  3 0.25" size="3 0.05 0.25" material="wall"/>
+    <geom name="wall_s" type="box" pos="0 -3 0.25" size="3 0.05 0.25" material="wall"/>
+    <geom name="wall_w" type="box" pos="-3 0 0.25" size="0.05 3 0.25" material="wall"/>
+    <!-- east wall is glass: physical, but invisible to the LiDAR later -->
+    <geom name="glass_e" type="box" pos=" 3 0 0.25" size="0.02 3 0.25"
+          material="glass" group="3"/>
+    <!-- an interior glass pane, the interesting obstacle -->
+    <geom name="glass_pane" type="box" pos="1.2 0.0 0.25" size="0.02 0.6 0.25"
+          material="glass" group="3"/>
+    <geom name="box_obstacle" type="box" pos="-1.2 -1.0 0.2" size="0.3 0.3 0.2"
+          material="wall"/>
+
+    <!-- ===================== Robot ===================== -->
+    <body name="base_link" pos="0 0 0.06">
+      <freejoint name="base_free"/>
+      <!-- chassis: 0.30 x 0.22 x 0.08 m, ~4 kg -->
+      <geom name="chassis" type="box" size="0.15 0.11 0.04" mass="4.0" material="body"/>
+      <!-- frictionless rear caster -->
+      <geom name="caster" type="sphere" size="0.02" pos="-0.11 0 -0.04"
+            friction="0 0 0" condim="1" mass="0.05"/>
+      <site name="imu_site" pos="0 0 0"/>
+      <site name="lidar_site" pos="0.10 0 0.06" size="0.02" rgba="1 0.3 0.1 1"/>
+      <camera name="front_cam" pos="0.15 0 0.03" xyaxes="0 -1 0 0 0 1" fovy="70"/>
+
+      <!-- wheel separation 0.26 m, radius 0.05 m -->
+      <body name="wheel_left" pos="0.03 0.13 0" quat="0.7071068 -0.7071068 0 0">
+        <joint name="wheel_left_joint" class="wheel"/>
+        <geom name="wheel_left_geom" class="wheel" mass="0.3"/>
+      </body>
+      <body name="wheel_right" pos="0.03 -0.13 0" quat="0.7071068 -0.7071068 0 0">
+        <joint name="wheel_right_joint" class="wheel"/>
+        <geom name="wheel_right_geom" class="wheel" mass="0.3"/>
+      </body>
+    </body>
+  </worldbody>
+
+  <!-- wheel velocity servos (rad/s); the bridge node maps /cmd_vel to these -->
+  <actuator>
+    <velocity name="vel_left"  joint="wheel_left_joint"  kv="2.0" ctrlrange="-20 20"/>
+    <velocity name="vel_right" joint="wheel_right_joint" kv="2.0" ctrlrange="-20 20"/>
+  </actuator>
+
+  <sensor>
+    <!-- NOTE: objtype="xbody" = body frame; objtype="body" would give the inertial frame -->
+    <gyro          name="imu_gyro"  site="imu_site"/>
+    <accelerometer name="imu_accel" site="imu_site"/>
+    <jointvel      name="enc_left"  joint="wheel_left_joint"/>
+    <jointvel      name="enc_right" joint="wheel_right_joint"/>
+    <framepos      name="gt_pos"  objtype="xbody" objname="base_link"/>
+    <framequat     name="gt_quat" objtype="xbody" objname="base_link"/>
+  </sensor>
+</mujoco>
