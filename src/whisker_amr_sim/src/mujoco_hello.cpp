@@ -84,7 +84,7 @@ int main(int argc, char** argv) {
 
   // Arc: right wheel faster than left -> turns left.
   d->ctrl[0] = 6.0;   // left wheel, rad/s
-  d->ctrl[1] = 6.0;   // right wheel, rad/s
+  d->ctrl[1] = 8.0;   // right wheel, rad/s
 
   const double t_end = 5.0;
   double next_print = 0.0;
